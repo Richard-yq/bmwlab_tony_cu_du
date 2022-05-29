@@ -1,0 +1,341 @@
+A. Directory Structure :
+------------------------
+1. l2/build/ : contains files required to compile the code
+   a. common : contains individual module's makefile
+   b. odu    : contains main makefile to generate an executable binary
+   c. scripts: contains scripts for logging, installing netconf libraries and starting netopeer server
+   d. config : contains the configuration files
+   e. yang   : contains the YANG modules
+
+2. l2/docs/  : contains README and other configuration files for building docs
+	
+3. l2/src/ : contains layer specific source code
+   a. 5gnrmac  : MAC source code
+   b. 5gnrrlc  : RLC source code
+   c. cm       : common, environment and interface files
+   d. cu_stub  : Stub code for CU
+   e. du_app   : DU application and F1 code 
+   f. mt       : wrapper functions over OS
+   g. phy_stub : Stub code for Physical layer
+   h. rlog     : logging module
+   i. O1       : O1 module
+
+
+B. Pre-requisite for Compilation :
+----------------------------------
+1. Linux 32-bit/64-bit machine
+2. GCC version 4.6.3 and above
+3. Install LKSCTP
+   a. On Ubuntu : sudo apt-get install -y libsctp-dev
+   b. On CentOS : sudo yum install -y lksctp-tools-devel
+4. Install PCAP:
+   a. On ubuntu : sudo apt-get install -y libpcap-dev
+   b. On CentOS : sudo yum install -y libpcap-devel
+
+
+C. Pre-requisite for O1 Interface (Required only if run with O1 interface enabled) 
+-----------------------------------------------------------------------------------
+1. Setup netconf server
+
+    a. Add new netconf user (login with root user or use sudo and run following script)
+       $cd l2/build/scripts
+       $sudo ./add_netconf_user.sh
+
+    b. Install netconf packages.
+       $chmod +x install_lib_O1.sh
+       $sudo ./install_lib_O1.sh -c
+
+2. Update the configuration according to your setup.
+
+   $cd l2/build/config
+
+   a. Open the startup_config.xml and edit the desired IP and Port for CU, DU and RIC.
+   b. Open the nacm_config.xml and edit the desired user name to provide the access to that user.
+   c. Open the netconf_server_ipv6.xml and edit the desired netconf server configuration.
+   d. Open the oamVesConfig.json and edit the details of OAM VES collector.
+   e. Open the smoVesConfig.json and edit the details of SMO VES collector.
+   f. Open the netconfConfig.json and edit the details of Netopeer server.
+   g. Install the yang modules and load initial configuration
+
+   $cd l2/build/scripts
+   $sudo ./load_yang.sh
+
+   h. Install additional 3GPP yang models.
+
+      Download following 3GPP REL17 YANG models
+      https://forge.3gpp.org/rep/sa5/MnS/tree/Rel17-draft/yang-models
+
+   $cd l2/build/yang
+
+   _3gpp-common-top.yang
+   _3gpp-5g-common-yang-types.yang
+   _3gpp-common-yang-types.yang
+   _3gpp-common-managed-element.yang
+   _3gpp-common-measurements.yang
+   _3gpp-common-subscription-control.yang
+   _3gpp-common-fm.yang
+   _3gpp-common-trace.yang
+   _3gpp-common-managed-function.yang
+   _3gpp-nr-nrm-gnbdufunction.yang
+   _3gpp-nr-nrm-nrcelldu.yang
+   _3gpp-nr-nrm-rrmpolicy.yang
+
+   Note :There are some corrections required in _3gpp-common-trace.yang and _3gpp-common-trace.yang yang model. Please follow these steps.
+
+   $cd l2/build/yang
+   $sed -i -e 's/"IMMEDIATE_MDT"/"IMMEDIATE_MDT_ONLY"/g' _3gpp-common-trace.yang
+   $sed -i -e 's/"TRACE"/"TRACE_ONLY"/g' _3gpp-common-trace.yang
+
+   Install all the downloaded yang models.
+
+   $cd l2/build/yang
+   $sysrepoctl -i      _3gpp-common-yang-types.yang
+   $sysrepoctl -i      _3gpp-common-top.yang
+   $sysrepoctl -i      _3gpp-common-measurements.yang
+   $sysrepoctl -i      _3gpp-common-trace.yang
+   $sysrepoctl -i      _3gpp-common-managed-function.yang
+   $sysrepoctl -i      _3gpp-common-subscription-control.yang
+   $sysrepoctl -i      _3gpp-common-fm.yang
+   $sysrepoctl -i      _3gpp-common-managed-element.yang
+   $sysrepoctl -i      _3gpp-5g-common-yang-types.yang
+   $sysrepoctl -i      _3gpp-nr-nrm-rrmpolicy.yang
+   $sysrepoctl -i      _3gpp-nr-nrm-gnbdufunction.yang
+   $sysrepoctl -i      _3gpp-nr-nrm-nrcelldu.yang
+
+
+3. Start Netopeer2-server:
+   $cd l2/build/scripts
+   $sudo ./netopeer-server.sh start
+
+
+D. How to Clean and Build:
+--------------------------
+1. Build commands:
+   a. odu       - Builds all components of ODU
+   b. cu_stub   - Builds all CU Stub
+   c. ric_stub  - Builds all RIC_Stub
+   d. clean_odu - clean up ODU
+   e. clean_cu  - clean up CU Stub
+   f. clean_ric - clean up RIC Stub
+   g. clean_all - cleanup everything
+   h. options:
+      i.   MACHINE=BIT64/BIT32 - Specify underlying machine type. Default is BIT32
+      ii.  NODE=TEST_STUB      - Specify if it is a test node. Mandatory for cu_stub/ric_stub. Must not be used for odu
+      iii. MODE=FDD/TDD        - Specify duplex mode. Default is FDD
+      iv.  PHY=INTEL_L1        - Specify type of phy. If not specified, PHY stub is used
+      v.   PHY_MODE=TIMER      - Specify mode of phy. Used only if PHY=INTEL_L1. Default is radio mode
+      vi.  O1_ENABLE=YES       - Specify if O1 interface is enabled. If not specified, it is disabled 
+
+2. Building ODU binary:
+   a. Build folder
+         cd l2/build/odu
+   b. Building ODU binary
+         make odu MACHINE=<refer section D.1.h>  MODE=<refer section D.1.h>
+   c. Cleaning ODU binary
+         make clean_odu MACHINE=<refer section D.1.h> MODE=<refer section D.1.h>
+
+3. Building CU Stub binary:
+   a. Build folder
+         cd l2/build/odu
+   b. Building CU Stub binary
+         make cu_stub NODE=<refer section D.1.h> MACHINE=<refer section D.1.h> MODE=<refer section D.1.h>
+   c. Cleaning CU Stub binary
+         make clean_cu NODE=<refer section D.1.h> MACHINE=<refer section D.1.h> MODE=<refer section D.1.h>
+
+4. Building RIC Stub binary:
+   a. Build folder
+         cd l2/build/odu
+   b. Building RIC Stub binary
+         make ric_stub NODE=<refer section D.1.h> MACHINE=<refer section D.1.h> MODE=<refer section D.1.h>
+   c. Cleaning RIC Stub binary
+         make clean_ric NODE=<refer section D.1.h> MACHINE=<refer section D.1.h> MODE=<refer section D.1.h>
+
+5. Cleaning ODU, CU Stub and RIC Stub:
+      make clean_all
+
+
+E. How to Clean and Build with O1 interface enabled (Requires pre-requisite steps in section C)
+------------------------------------------------------------------------------------------------
+
+1. Building ODU binary:
+   a. Build folder
+         cd l2/build/odu
+   b. Building ODU binary
+         make odu MACHINE=<refer section D.1.h> MODE=<refer section D.1.h> O1_ENABLE=<refer section D.1.h>
+   c. Cleaning ODU binary
+         make clean_odu MACHINE=<refer section D.1.h> MODE=<refer section D.1.h> O1_ENABLE=<refer section D.1.h>
+
+2. Building CU Stub binary:
+   a. Build folder
+         cd l2/build/odu
+   b. Building CU Stub binary
+         make cu_stub NODE=<refer section D.1.h> MACHINE=<refer section D.1.h> MODE=<refer section D.1.h> O1_ENABLE=<refer section D.1.h>
+   c. Cleaning CU Stub binary
+         make clean_cu NODE=<refer section D.1.h> MACHINE=<refer section D.1.h> MODE=<refer section D.1.h> O1_ENABLE=<refer section D.1.h>
+
+3. Building RIC Stub binary:
+   a. Build folder
+         cd l2/build/odu
+   b. Building RIC Stub binary
+         make ric_stub NODE=<refer section D.1.h> MACHINE=<refer section D.1.h> MODE=<refer section D.1.h> O1_ENABLE=<refer section D.1.h>
+   c. Cleaning RIC Stub binary
+         make clean_ric NODE=<refer section D.1.h> MACHINE=<refer section D.1.h> MODE=<refer section D.1.h> O1_ENABLE=<refer section D.1.h>
+
+4. Cleaning ODU, CU Stub and RIC Stub:
+      make clean_all
+
+
+F. How to execute:
+------------------
+1. Assign virtual IP addresses as follows:
+   a. ifconfig <interface name>:ODU "192.168.130.81"
+   b. ifconfig <interface name>:CU_STUB "192.168.130.82"
+   c. ifconfig <interface name>:RIC_STUB "192.168.130.80"
+
+PS: If O1 interface is enabled, IP should match those configured in step C.2.a.
+
+2. Execute CU Stub:
+   a. CU execution folder:
+      	cd l2/bin/cu_stub
+   b. Run CU Stub binary:
+      	./cu_stub
+
+3. Execute RIC Stub:
+   a. RIC execution folder:
+      	cd l2/bin/ric_stub
+   b. Run RIC Stub binary:
+      	./ric_stub
+
+4. Execute DU:
+   a. DU execution folder:
+      	cd l2/bin/odu
+   b. Run ODU binary:
+      	./odu
+
+PS: CU stub and RIC stub must be run (in no particular sequence) before ODU
+
+
+G. How to test with Intel L1:
+-----------------------------
+
+I. Compilation
+   1. Build ODU :
+      a. Create folder l2/src/wls_lib. Copy wls_lib.h from <intel_directory>/phy/wls_lib/ to l2/src/wls_lib.
+      b. Create folder l2/src/dpdk_lib. Copy following files from <intel_directory>/dpdk-19.11/x86_64-native-linuxapp-gcc/include/ to l2/sr        c/dpdk_lib.
+                rte_branch_prediction.h
+                rte_common.h
+                rte_config.h
+                rte_dev.h
+                rte_log.h
+                rte_pci_dev_feature_defs.h
+                rte_bus.h
+                rte_compat.h
+                rte_debug.h
+                rte_eal.h
+                rte_os.h
+                rte_per_lcore.h
+      c. Build folder
+                cd l2/build/odu
+      d. Build ODU Binary:
+		          make odu PHY=<refer section D.1.h> PHY_MODE=<refer section D.1.h> MACHINE=<refer section D.1.h> MODE=<refer section D.1.h>
+
+   2. Build CU Stub and RIC Stub:
+      a. Execute steps in sections D.3 and D.4
+
+II. Execution
+    1. Refer to below link for assumptions, dependencies, pre-requisites etc for ODU-Low execution
+       https://docs.o-ran-sc.org/projects/o-ran-sc-o-du-phy/en/latest/
+
+    2. Execute L1:
+       a. Setup environment:
+                cd <intel_directory>/phy/
+                source ./setupenv.sh
+       b. Run L1 binary :
+                cd <intel_directory>/FlexRAN/l1/bin/nr5g/gnb/l1
+                To run 
+			i.  In timer mode : ./l1.sh -e
+                	ii. In radio mode : ./l1.sh -xran
+                L1 is up when console prints follow:
+
+                   Non BBU threads in application
+                   ===========================================================================================================
+                   nr5g_gnb_phy2mac_api_proc_stats_thread: [PID:   8659] binding on [CPU  0] [PRIO:  0] [POLICY:  1]
+                   wls_rx_handler (non-rt):                [PID:   8663] binding on [CPU  0]
+                   ===========================================================================================================
+                 
+                   PHY>welcome to application console
+
+    3. Execute FAPI Translator:
+       a. Setup environment:
+                cd <intel_directory>/phy/
+                source ./setupenv.sh
+       b. Run FAPI translator binary:
+                cd <intel_directory>/phy/fapi_5g/bin/
+                ./oran_5g_fapi --cfg=oran_5g_fapi.cfg
+
+    4. Execute CU Stub and RIC Stub:
+       a. Run steps in sections E.1-E.3
+
+    5. Execute DU:
+       a. DU execution folder
+          	cd l2/bin/odu
+       b. Export WLS library path
+          	export LD_LIBRARY_PATH=<intel_directory>/phy/wls_lib/lib:$LD_LIBRARY_PATH
+       c. Run ODU binary
+          	./odu
+
+
+H. How to execute the Health Check : get alarm-list
+----------------------------------------------------
+   
+   Steps:
+
+   1. Start Netconf netopeer client 
+   
+   2. Connect to the server with 
+
+        user: netconf
+        pwd:  netconf!
+
+   3. Send a Netconf get request for alarms xpath
+
+   Here are the steps as executed in the terminal 
+
+      $netopeer2-cli
+       > connect --login netconf
+       Interactive SSH Authentication
+       Type your password:
+       Password:
+       > get --filter-xpath /o-ran-sc-odu-alarm-v1:odu/alarms
+       DATA
+       <odu xmlns="urn:o-ran:odu:alarm:1.0">
+         <alarms>
+           <alarm>
+             <alarm-id>1009</alarm-id>
+             <alarm-text>cell id  [1] is up</alarm-text>
+             <severity>2</severity>
+             <status>Active</status>
+             <additional-info>cell UP</additional-info>
+           </alarm>
+         </alarms>
+       </odu>
+
+   The XML output is a list of active alarms in the O-DU High system.
+
+I. Push cell and slice configuration over O1 using netopeer-cli
+---------------------------------------------------------------
+   When O-DU High is run with O1 enabled it waits for cell configuration to be pushed by SMO. In case the SMO is not available then these configurations can be pushed via netopeer-cli as follows.
+   1. Follow step H.1 and H.2.
+   2. update cellConfig.xml and rrmPolicy.xml.
+      $cd l2/build/config
+      $edit-config --target candidate --config=cellConfig.xml
+      $edit-config --target candidate --config=rrmPolicy.xml
+
+
+J. Troubleshooting Netconf server issues
+----------------------------------------
+   In case the Netconf server and sysrepo breaks down, run the following steps:
+
+   $cd l2/build/scripts
+   $sudo ./troubleshoot_netconf.sh cleanup
+   execute section C.2.f, C.3 again
