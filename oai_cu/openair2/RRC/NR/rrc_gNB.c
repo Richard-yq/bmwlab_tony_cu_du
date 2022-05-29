@@ -2902,7 +2902,8 @@ void rrc_gNB_process_f1_setup_req(f1ap_setup_req_t *f1_setup_req) {
         rrc->carrier.sizeof_SIB1 = f1_setup_req->sib1_length[i];
         memcpy((void *)rrc->carrier.SIB1,f1_setup_req->sib1[i],f1_setup_req->sib1_length[i]);
         dec_rval = uper_decode_complete(NULL,
-                                        &asn_DEF_NR_BCCH_DL_SCH_Message,
+                                        //&asn_DEF_NR_BCCH_DL_SCH_Message,
+                                        &asn_DEF_NR_BCCH_BCH_Message,
                                         (void **)&rrc->carrier.siblock1_DU,
                                         f1_setup_req->sib1[i],
                                         f1_setup_req->sib1_length[i]);
@@ -2915,8 +2916,8 @@ void rrc_gNB_process_f1_setup_req(f1ap_setup_req_t *f1_setup_req) {
         NR_BCCH_DL_SCH_Message_t *bcch_message = rrc->carrier.siblock1_DU;
         AssertFatal(bcch_message->message.present == NR_BCCH_DL_SCH_MessageType_PR_c1,
                     "bcch_message->message.present != NR_BCCH_DL_SCH_MessageType_PR_c1\n");
-        AssertFatal(bcch_message->message.choice.c1->present == NR_BCCH_DL_SCH_MessageType__c1_PR_systemInformationBlockType1,
-                    "bcch_message->message.choice.c1->present != NR_BCCH_DL_SCH_MessageType__c1_PR_systemInformationBlockType1\n");
+        /*AssertFatal(bcch_message->message.choice.c1->present == NR_BCCH_DL_SCH_MessageType__c1_PR_systemInformationBlockType1,
+                    "bcch_message->message.choice.c1->present != NR_BCCH_DL_SCH_MessageType__c1_PR_systemInformationBlockType1\n");*/
         rrc->carrier.sib1 = bcch_message->message.choice.c1->choice.systemInformationBlockType1;
         rrc->carrier.physCellId = f1_setup_req->cell[i].nr_pci;
 
