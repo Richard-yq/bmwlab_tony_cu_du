@@ -460,17 +460,186 @@ int CU_handle_gNB_DU_CONFIGURATION_UPDATE(instance_t instance,
     uint32_t assoc_id,
     uint32_t stream,
     F1AP_F1AP_PDU_t *pdu) {
-  AssertFatal(1==0,"Not implemented yet\n");
+  //AssertFatal(1==0,"Not implemented yet\n");
+  LOG_D(F1AP, "CU_handle_gNB_DU_CONFIGURATION_UPDATE\n");
+  AssertFatal(pdu->present == F1AP_F1AP_PDU_PR_initiatingMessage,
+              "pdu->present != F1AP_F1AP_PDU_PR_initiatingMessage\n");
+  AssertFatal(pdu->choice.initiatingMessage->procedureCode  == F1AP_ProcedureCode_id_gNBDUConfigurationUpdate,
+              "pdu->choice.initiatingMessage->procedureCode != F1AP_ProcedureCode_id_gNBDUConfigurationUpdate\n");
+  AssertFatal(pdu->choice.initiatingMessage->criticality  == F1AP_Criticality_reject,
+              "pdu->choice.initiatingMessage->criticality != F1AP_Criticality_reject\n");
+  AssertFatal(pdu->choice.initiatingMessage->value.present  == F1AP_InitiatingMessage__value_PR_GNBDUConfigurationUpdate,
+              "pdu->choice.initiatingMessage->value.present != F1AP_InitiatingMessage__value_PR_GNBDUConfigurationUpdate\n");
+  F1AP_GNBDUConfigurationUpdate_t *in = &pdu->choice.initiatingMessage->value.choice.GNBDUConfigurationUpdate;
+  F1AP_GNBDUConfigurationUpdateIEs_t *ie;
+
+  int TransactionId = -1;
+  int num_cells_to_modify = 0;
+  bool cellToBeDelete = false;
+  F1AP_Served_Cells_To_Modify_Item_t *cell;
+  MessageDef *msg_p = itti_alloc_new_message (TASK_CU_F1, 0, F1AP_GNB_DU_CONFIGURATION_UPDATE);
+  LOG_D(F1AP, "F1AP: gNB_DU_Configuration_Update: protocolIEs.list.count %d\n",
+        in->protocolIEs.list.count);
+
+  for (int i=0; i < in->protocolIEs.list.count; i++) {
+    ie = in->protocolIEs.list.array[i];
+
+    switch (ie->id) {
+      case F1AP_ProtocolIE_ID_id_TransactionID:
+            AssertFatal(ie->criticality == F1AP_Criticality_reject,
+                      "ie->criticality != F1AP_Criticality_reject\n");
+            AssertFatal(ie->value.present == F1AP_GNBDUConfigurationUpdateIEs__value_PR_TransactionID,
+                      "ie->value.present != F1AP_GNBDUConfigurationUpdateIEs__value_PR_TransactionID\n");
+            TransactionId=ie->value.choice.TransactionID;
+            LOG_D(F1AP, "F1AP: GNB-DU-ConfigurationUpdate: TransactionId %d\n",
+                  TransactionId);
+            break;
+
+      case F1AP_ProtocolIE_ID_id_Served_Cells_To_Modify_List:
+            AssertFatal(ie->criticality == F1AP_Criticality_reject,
+                    "ie->criticality != F1AP_Criticality_reject\n");
+            AssertFatal(ie->value.present == F1AP_GNBDUConfigurationUpdateIEs__value_PR_Served_Cells_To_Modify_List,
+                    "ie->value.present != F1AP_GNBDUConfigurationUpdateIEs__value_PR_Served_Cells_To_Modify_List\n");
+            num_cells_to_modify = ie->value.choice.Served_Cells_To_Modify_List.list.count;
+            LOG_D(F1AP, "F1AP: Modifying %d cells\n",num_cells_to_modify);
+            for (int i=0; i<num_cells_to_modify; i++) {
+              F1AP_Served_Cells_To_Modify_ItemIEs_t *served_cells_to_modify_item_ies = (F1AP_Served_Cells_To_Modify_ItemIEs_t *) ie->value.choice.Served_Cells_To_Modify_List.list.array[i];
+              AssertFatal(served_cells_to_modify_item_ies->id == F1AP_ProtocolIE_ID_id_Served_Cells_To_Modify_Item,
+                          "served_cells_to_modify_item_ies->id != F1AP_ProtocolIE_ID_id_Served_Cells_To_Modify_Item");
+              AssertFatal(served_cells_to_modify_item_ies->criticality == F1AP_Criticality_reject,
+                          "served_cells_to_modify_item_ies->criticality == F1AP_Criticality_reject");
+              AssertFatal(served_cells_to_modify_item_ies->value.present == F1AP_Served_Cells_To_Modify_ItemIEs__value_PR_Served_Cells_To_Modify_Item,
+                          "served_cells_to_modify_item_ies->value.present == F1AP_Served_Cells_To_Modify_ItemIEs__value_PR_Served_Cells_To_Modify_Item");
+              cell = &served_cells_to_modify_item_ies->value.choice.Served_Cells_To_Modify_Item;
+              // Old Cell
+              TBCD_TO_MCC_MNC(&cell->oldNRCGI.pLMN_Identity, F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_to_modify[i].mcc, F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_to_modify[i].mnc,
+                                F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_to_modify[i].mnc_digit_length);
+              LOG_D(F1AP, "Old nr_cellId : %x %x %x %x %x\n",
+                    cell->oldNRCGI.nRCellIdentity.buf[0],
+                    cell->oldNRCGI.nRCellIdentity.buf[1],
+                    cell->oldNRCGI.nRCellIdentity.buf[2],
+                    cell->oldNRCGI.nRCellIdentity.buf[3],
+                    cell->oldNRCGI.nRCellIdentity.buf[4]);
+              BIT_STRING_TO_NR_CELL_IDENTITY(&cell->oldNRCGI.nRCellIdentity,
+                                             F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_to_modify[i].nr_cellid);
+              LOG_D(F1AP, "F1AP: Old Cell %d MCC %d MNC %d MNC Digit Length %d NRCellid %lx\n",
+                          i, F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_to_modify[i].mcc, F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_to_modify[i].mnc,
+                          F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_to_modify[i].mnc_digit_length,
+                          F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_to_modify[i].nr_cellid);
+              // Modified Cell info
+              TBCD_TO_MCC_MNC(&cell->served_Cell_Information.nRCGI.pLMN_Identity, F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_info_to_modify[i].mcc, F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_info_to_modify[i].mnc,
+                                F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_info_to_modify[i].mnc_digit_length);
+              LOG_D(F1AP, "Modified nr_cellId : %x %x %x %x %x\n",
+                    cell->served_Cell_Information.nRCGI.nRCellIdentity.buf[0],
+                    cell->served_Cell_Information.nRCGI.nRCellIdentity.buf[1],
+                    cell->served_Cell_Information.nRCGI.nRCellIdentity.buf[2],
+                    cell->served_Cell_Information.nRCGI.nRCellIdentity.buf[3],
+                    cell->served_Cell_Information.nRCGI.nRCellIdentity.buf[4]);
+              BIT_STRING_TO_NR_CELL_IDENTITY(&cell->served_Cell_Information.nRCGI.nRCellIdentity,
+                                             F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_info_to_modify[i].nr_cellid);
+              LOG_D(F1AP, "F1AP: Modified Cell %d MCC %d MNC %d MNC Digit Length %d NRCellid %lx\n",
+                          i, F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_info_to_modify[i].mcc, F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_info_to_modify[i].mnc,
+                          F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_info_to_modify[i].mnc_digit_length,
+                          F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_info_to_modify[i].nr_cellid);
+              F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).cells_info_to_modify[i].nrpci = cell->served_Cell_Information.nRPCI;
+            }
+            break;
+
+      case F1AP_ProtocolIE_ID_id_Served_Cells_To_Delete_List:
+            cellToBeDelete = true;
+            break;
+      case F1AP_ProtocolIE_ID_id_gNB_DU_ID:
+            break;
+
+      default:
+            AssertFatal(1==0,"F1AP_ProtocolIE_ID_id %d unknown\n", (int)ie->id);
+            break;
+    }
+  }
+
+  AssertFatal(TransactionId!=-1,"TransactionId was not sent\n");
+  LOG_D(F1AP,"F1AP: num_cells_to_modify %d\n",num_cells_to_modify);
+  F1AP_GNB_DU_CONFIGURATION_UPDATE (msg_p).num_cells_to_modify = num_cells_to_modify;
+  LOG_D(F1AP, "Sending F1AP_GNB_DU_CONFIGURATION_UPDATE ITTI message \n");
+  itti_send_msg_to_task (f1ap_req(true,ITTI_MSG_DESTINATION_ID(msg_p))->cell_type==CELL_MACRO_GNB?TASK_GNB_APP:TASK_ENB_APP,\ 
+                                  GNB_MODULE_ID_TO_INSTANCE(assoc_id), msg_p);
+
+  return 0;
 }
 
 int CU_send_gNB_DU_CONFIGURATION_FAILURE(instance_t instance,
-    F1AP_GNBDUConfigurationUpdateFailure_t *GNBDUConfigurationUpdateFailure) {
-  AssertFatal(1==0,"Not implemented yet\n");
+    f1ap_gnb_du_configuration_update_failure_t *f1ap_gnb_du_configuration_update_failure) {
+  //AssertFatal(1==0,"Not implemented yet\n");
+  F1AP_F1AP_PDU_t           pdu= {0};
+  uint8_t  *buffer=NULL;
+  uint32_t  len=0;
+  /* Create */
+  /* 0. pdu Type */
+  pdu.present = F1AP_F1AP_PDU_PR_unsuccessfulOutcome;
+  asn1cCalloc(pdu.choice.unsuccessfulOutcome, tmp);
+  tmp->procedureCode = F1AP_ProcedureCode_id_gNBDUConfigurationUpdate;
+  tmp->criticality   = F1AP_Criticality_reject;
+  tmp->value.present = F1AP_UnsuccessfulOutcome__value_PR_GNBDUConfigurationUpdateFailure;
+  F1AP_GNBDUConfigurationUpdateFailure_t *out = &tmp->value.choice.GNBDUConfigurationUpdateFailure;
+  /* mandatory */
+  /* c1. Transaction ID (integer value)*/
+  asn1cSequenceAdd(out->protocolIEs.list, F1AP_GNBDUConfigurationUpdateFailureIEs_t, ie1);
+  ie1->id                        = F1AP_ProtocolIE_ID_id_TransactionID;
+  ie1->criticality               = F1AP_Criticality_reject;
+  ie1->value.present             = F1AP_GNBDUConfigurationUpdateFailureIEs__value_PR_TransactionID;
+  ie1->value.choice.TransactionID = 1;
+  /* c2. Cause */
+  asn1cSequenceAdd(out->protocolIEs.list, F1AP_GNBDUConfigurationUpdateFailureIEs_t, ie2);
+  ie2->id                        = F1AP_ProtocolIE_ID_id_Cause;
+  ie2->criticality               = F1AP_Criticality_reject;
+  ie2->value.present             = F1AP_GNBDUConfigurationUpdateFailureIEs__value_PR_Cause;
+  if(f1ap_gnb_du_configuration_update_failure->cause == 11){
+    ie2->value.choice.Cause.present = F1AP_Cause_PR_radioNetwork;
+    ie2->value.choice.Cause.choice.radioNetwork = F1AP_CauseRadioNetwork_cell_not_available;
+  }
+
+  /* encode */
+  if (f1ap_encode_pdu(&pdu, &buffer, &len) < 0) {
+    LOG_E(F1AP, "Failed to encode GNB-DU-Configuration-Update-Failure\n");
+    return -1;
+  }
+
+  ASN_STRUCT_RESET(asn_DEF_F1AP_F1AP_PDU, &pdu);
+  f1ap_itti_send_sctp_data_req(true, instance, buffer, len, 0);
+  return 0;
 }
 
 int CU_send_gNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(instance_t instance,
-    F1AP_GNBDUConfigurationUpdateAcknowledge_t *GNBDUConfigurationUpdateAcknowledge) {
-  AssertFatal(1==0,"Not implemented yet\n");
+    f1ap_gnb_du_configuration_update_acknowledge_t *f1ap_gnb_du_configuration_update_acknowledge) {
+  //AssertFatal(1==0,"Not implemented yet\n");
+  F1AP_F1AP_PDU_t           pdu= {0};
+  uint8_t  *buffer=NULL;
+  uint32_t  len=0;
+  /* Create */
+  /* 0. pdu Type */
+  pdu.present = F1AP_F1AP_PDU_PR_successfulOutcome;
+  asn1cCalloc(pdu.choice.successfulOutcome, tmp);
+  tmp->procedureCode = F1AP_ProcedureCode_id_gNBDUConfigurationUpdate;
+  tmp->criticality   = F1AP_Criticality_reject;
+  tmp->value.present = F1AP_SuccessfulOutcome__value_PR_GNBDUConfigurationUpdateAcknowledge;
+  F1AP_GNBDUConfigurationUpdateAcknowledge_t *out = &tmp->value.choice.GNBDUConfigurationUpdateAcknowledge;
+  /* mandatory */
+  /* c1. Transaction ID (integer value)*/
+  asn1cSequenceAdd(out->protocolIEs.list, F1AP_GNBDUConfigurationUpdateAcknowledgeIEs_t, ie);
+  ie->id                        = F1AP_ProtocolIE_ID_id_TransactionID;
+  ie->criticality               = F1AP_Criticality_reject;
+  ie->value.present             = F1AP_GNBDUConfigurationUpdateAcknowledgeIEs__value_PR_TransactionID;
+  ie->value.choice.TransactionID = 1;
+
+  /* encode */
+  if (f1ap_encode_pdu(&pdu, &buffer, &len) < 0) {
+    LOG_E(F1AP, "Failed to encode GNB-DU-Configuration-Update-Acknowledge\n");
+    return -1;
+  }
+
+  ASN_STRUCT_RESET(asn_DEF_F1AP_F1AP_PDU, &pdu);
+  f1ap_itti_send_sctp_data_req(true, instance, buffer, len, 0);
+  return 0;
 }
 
 /*

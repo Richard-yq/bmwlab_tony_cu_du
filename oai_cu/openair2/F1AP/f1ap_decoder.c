@@ -47,6 +47,10 @@ static int f1ap_decode_initiating_message(F1AP_F1AP_PDU_t *pdu) {
       LOG_I(F1AP, "%s(): F1AP_ProcedureCode_id_F1Setup\n", __func__);
       break;
 
+    case F1AP_ProcedureCode_id_gNBDUConfigurationUpdate:
+      LOG_I(F1AP, "%s(): F1AP_ProcedureCode_id_gNBDUConfigurationUpdate\n", __func__);
+      break;
+
     case F1AP_ProcedureCode_id_gNBCUConfigurationUpdate:
       //res = asn_encode_to_new_buffer(NULL, ATS_CANONICAL_XER, &asn_DEF_F1AP_F1AP_PDU, pdu);
       LOG_I(F1AP, "%s(): F1AP_ProcedureCode_id_gNBCUConfigurationUpdate\n", __func__);

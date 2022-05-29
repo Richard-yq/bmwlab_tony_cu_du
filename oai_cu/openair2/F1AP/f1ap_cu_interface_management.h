@@ -77,10 +77,10 @@ int CU_handle_gNB_DU_CONFIGURATION_UPDATE(instance_t instance,
     F1AP_F1AP_PDU_t *pdu);
 
 int CU_send_gNB_DU_CONFIGURATION_FAILURE(instance_t instance,
-    F1AP_GNBDUConfigurationUpdateFailure_t *GNBDUConfigurationUpdateFailure);
+    f1ap_gnb_du_configuration_update_failure_t *f1ap_gnb_du_configuration_update_failure);
 
 int CU_send_gNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(instance_t instance,
-    F1AP_GNBDUConfigurationUpdateAcknowledge_t *GNBDUConfigurationUpdateAcknowledge);
+    f1ap_gnb_du_configuration_update_acknowledge_t *f1ap_gnb_du_configuration_update_acknowledge);
 
 /*
  * gNB-CU Configuration Update

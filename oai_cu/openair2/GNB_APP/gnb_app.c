@@ -150,6 +150,7 @@ void *gNB_app_task(void *args_p)
   (void)instance;
 
   int cell_to_activate = 0;
+  int cell_to_modify = 0;
   itti_mark_task_ready (TASK_GNB_APP);
 
   LOG_I(PHY, "%s() Task ready initialize structures\n", __FUNCTION__);
@@ -285,6 +286,19 @@ void *gNB_app_task(void *args_p)
       cell_to_activate = F1AP_SETUP_RESP(msg_p).num_cells_to_activate;
       
       gNB_app_handle_f1ap_setup_resp(&F1AP_SETUP_RESP(msg_p));
+
+      break;
+    case F1AP_GNB_DU_CONFIGURATION_UPDATE:
+      AssertFatal(NODE_IS_CU(RC.nrrrc[0]->node_type), "Should not have received F1AP_GNB_DU_CONFIGURATION_UPDATE in DU/gNB\n");
+
+      LOG_I(GNB_APP, "Received %s: associated ngran_gNB_DU %s with %d cells to modify\n", ITTI_MSG_NAME (msg_p),
+      F1AP_GNB_DU_CONFIGURATION_UPDATE(msg_p).gNB_DU_name,F1AP_GNB_DU_CONFIGURATION_UPDATE(msg_p).num_cells_to_modify);
+
+      cell_to_modify += F1AP_GNB_DU_CONFIGURATION_UPDATE(msg_p).num_cells_to_modify;
+      gNB_app_handle_f1ap_gnb_du_configuration_update(&F1AP_GNB_DU_CONFIGURATION_UPDATE(msg_p));
+
+      /* Check if at least gNB is registered with one AMF */
+      AssertFatal(cell_to_modify == 1 ,"No cells to modify or cells > 1 %d\n",cell_to_modify);
 
       break;
     case F1AP_GNB_CU_CONFIGURATION_UPDATE:

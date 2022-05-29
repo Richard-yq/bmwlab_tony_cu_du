@@ -160,6 +160,18 @@ void *F1AP_CU_task(void *arg) {
                                   &F1AP_SETUP_RESP(received_msg));
         break;
 
+      case F1AP_GNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE:
+        LOG_I(F1AP, "CU Task Received F1AP_GNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE\n");
+        CU_send_gNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(ITTI_MSG_ORIGIN_INSTANCE(received_msg),
+            &F1AP_GNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(received_msg));
+        break;
+
+      case F1AP_GNB_DU_CONFIGURATION_UPDATE_FAILURE:
+        LOG_I(F1AP, "CU Task Received F1AP_GNB_DU_CONFIGURATION_UPDATE_FAILURE\n");
+        CU_send_gNB_DU_CONFIGURATION_FAILURE(ITTI_MSG_ORIGIN_INSTANCE(received_msg),
+            &F1AP_GNB_DU_CONFIGURATION_UPDATE_FAILURE(received_msg));
+        break;
+
       case F1AP_GNB_CU_CONFIGURATION_UPDATE: // from rrc
         LOG_I(F1AP, "CU Task Received F1AP_GNB_CU_CONFIGURAITON_UPDATE\n");
         // CU_send_f1setup_resp(ITTI_MSG_DESTINATION_INSTANCE(received_msg),

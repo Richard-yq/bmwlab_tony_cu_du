@@ -31,6 +31,9 @@
 
 #define F1AP_SETUP_REQ(mSGpTR)                     (mSGpTR)->ittiMsg.f1ap_setup_req
 #define F1AP_SETUP_RESP(mSGpTR)                    (mSGpTR)->ittiMsg.f1ap_setup_resp
+#define F1AP_GNB_DU_CONFIGURATION_UPDATE(mSGpTR)   (mSGpTR)->ittiMsg.f1ap_gnb_du_configuration_update
+#define F1AP_GNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(mSGpTR)   (mSGpTR)->ittiMsg.f1ap_gnb_du_configuration_update_acknowledge
+#define F1AP_GNB_DU_CONFIGURATION_UPDATE_FAILURE(mSGpTR)   (mSGpTR)->ittiMsg.f1ap_gnb_du_configuration_update_failure
 #define F1AP_GNB_CU_CONFIGURATION_UPDATE(mSGpTR)   (mSGpTR)->ittiMsg.f1ap_gnb_cu_configuration_update
 #define F1AP_GNB_CU_CONFIGURATION_UPDATE_ACKNOWLEDGE(mSGpTR)   (mSGpTR)->ittiMsg.f1ap_gnb_cu_configuration_update_acknowledge
 #define F1AP_GNB_CU_CONFIGURATION_UPDATE_FAILURE(mSGpTR)   (mSGpTR)->ittiMsg.f1ap_gnb_cu_configuration_update_failure
@@ -207,6 +210,30 @@ typedef struct served_cells_to_activate_s {
   int SI_type[21];
 } served_cells_to_activate_t;
 
+typedef struct served_cells_to_modify_s {
+  /// mcc of DU cells
+  uint16_t mcc;
+  /// mnc of DU cells
+  uint16_t mnc;
+  /// mnc digit length of DU cells
+  uint8_t mnc_digit_length;
+  // NR Global Cell Id
+  uint64_t nr_cellid;
+} served_cells_to_modify_t;
+
+typedef struct served_cells_info_to_modify_s {
+  /// mcc of DU cells
+  uint16_t mcc;
+  /// mnc of DU cells
+  uint16_t mnc;
+  /// mnc digit length of DU cells
+  uint8_t mnc_digit_length;
+  // NR Global Cell Id
+  uint64_t nr_cellid;
+  /// NRPCI
+  uint16_t nrpci;
+} served_cells_info_to_modify_t;
+
 typedef struct f1ap_setup_resp_s {
   /* Connexion id used between SCTP/F1AP */
   uint16_t cnx_id;
@@ -224,6 +251,30 @@ typedef struct f1ap_setup_resp_s {
   uint16_t num_cells_to_activate; //0< num_cells_to_activate <= 512;
   served_cells_to_activate_t cells_to_activate[F1AP_MAX_NB_CELLS];
 } f1ap_setup_resp_t;
+
+typedef struct f1ap_gnb_du_configuration_update_s {
+  /* Connexion id used between SCTP/F1AP */
+  uint16_t cnx_id;
+
+  /* SCTP association id */
+  int32_t  assoc_id;
+
+  /* Number of SCTP streams used for a mme association */
+  uint16_t sctp_in_streams;
+  uint16_t sctp_out_streams;
+
+  /// string holding gNB_DU_name
+  char     *gNB_DU_name;
+  /// number of DU cells to add
+  uint16_t num_cells_add; //0< num_cells_add <= 512;
+  /// number of DU cells to activate
+  uint16_t num_cells_to_activate; //0< num_cells_to_activate/mod <= 512;
+  served_cells_to_activate_t cells_to_activate[F1AP_MAX_NB_CELLS];
+  /// number of DU cells to modify
+  uint16_t num_cells_to_modify; //0< num_cells_mod <= 512;
+  served_cells_to_modify_t cells_to_modify[F1AP_MAX_NB_CELLS];
+  served_cells_info_to_modify_t cells_info_to_modify[F1AP_MAX_NB_CELLS]; //0< num_cells_mod <= 512;
+} f1ap_gnb_du_configuration_update_t;
 
 typedef struct f1ap_gnb_cu_configuration_update_s {
   /* Connexion id used between SCTP/F1AP */
@@ -249,6 +300,30 @@ typedef struct f1ap_setup_failure_s {
   uint16_t criticality_diagnostics; 
 } f1ap_setup_failure_t;
 
+typedef struct f1ap_gnb_du_configuration_update_acknowledge_s {
+  uint16_t num_cells_failed_to_be_activated;
+  uint16_t num_cells_failed_to_be_modified;
+  uint16_t mcc[F1AP_MAX_NB_CELLS];
+  uint16_t mnc[F1AP_MAX_NB_CELLS];
+  uint8_t mnc_digit_length[F1AP_MAX_NB_CELLS];
+  uint64_t nr_cellid[F1AP_MAX_NB_CELLS];
+  uint16_t cause[F1AP_MAX_NB_CELLS];
+  int have_criticality;
+  uint16_t criticality_diagnostics; 
+  uint16_t noofTNLAssociations_to_setup;
+  uint16_t have_port[F1AP_MAX_NO_OF_TNL_ASSOCIATIONS];
+  in_addr_t tl_address[F1AP_MAX_NO_OF_TNL_ASSOCIATIONS]; // currently only IPv4 supported
+  uint16_t noofTNLAssociations_failed;
+  in_addr_t tl_address_failed[F1AP_MAX_NO_OF_TNL_ASSOCIATIONS]; // currently only IPv4 supported
+  uint16_t cause_failed[F1AP_MAX_NO_OF_TNL_ASSOCIATIONS];
+  uint16_t noofDedicatedSIDeliveryNeededUEs;
+  uint32_t gNB_DU_ue_id[F1AP_MAX_NO_UE_ID]; 
+  uint16_t ue_mcc[F1AP_MAX_NO_UE_ID]; 
+  uint16_t ue_mnc[F1AP_MAX_NO_UE_ID]; 
+  uint8_t  ue_mnc_digit_length[F1AP_MAX_NO_UE_ID]; 
+  uint64_t ue_nr_cellid[F1AP_MAX_NO_UE_ID];  
+} f1ap_gnb_du_configuration_update_acknowledge_t;
+
 typedef struct f1ap_gnb_cu_configuration_update_acknowledge_s {
   uint16_t num_cells_failed_to_be_activated;
   uint16_t mcc[F1AP_MAX_NB_CELLS];
@@ -271,6 +346,12 @@ typedef struct f1ap_gnb_cu_configuration_update_acknowledge_s {
   uint8_t  ue_mnc_digit_length[F1AP_MAX_NO_UE_ID]; 
   uint64_t ue_nr_cellid[F1AP_MAX_NO_UE_ID];  
 } f1ap_gnb_cu_configuration_update_acknowledge_t;
+
+typedef struct f1ap_gnb_du_configuration_update_failure_s {
+  uint16_t cause;
+  uint16_t time_to_wait;
+  uint16_t criticality_diagnostics; 
+} f1ap_gnb_du_configuration_update_failure_t;
 
 typedef struct f1ap_gnb_cu_configuration_update_failure_s {
   uint16_t cause;

@@ -1958,6 +1958,47 @@ int RCconfig_NR_DU_F1(MessageDef *msg_p, uint32_t i) {
   return 0;
 }
 
+int cu_check_plmn_identity(gNB_RrcConfigurationReq *configuration,uint16_t mcc,uint16_t mnc,uint8_t mnc_digit_length) {
+
+  // check if mcc is different and return failure if so
+  if (mcc !=
+      configuration->mcc[0]) {
+    LOG_E(GNB_APP, "mcc(%d) in message is different from mcc(%ld) in CU \n",
+                    mcc, configuration->mcc[0]);
+    return(0);
+  }
+
+  // check that mnc digit length is different and return failure if so
+  if (mnc_digit_length != configuration->mnc_digit_length[0]) {
+    LOG_E(GNB_APP, "mnc(length: %d) in message is different from mnc(length: %d) in CU \n",
+                    mnc_digit_length, configuration->mnc_digit_length[0]);
+    return 0;
+  }
+
+  // check that 2 digit mnc is different and return failure if so
+  if (mnc_digit_length == 2 &&
+      (mnc !=
+       configuration->mnc[0])) {
+    LOG_I(GNB_APP, "MNC Digit Length %d\n",
+            configuration->mnc[0]);
+    LOG_E(GNB_APP, "mnc(%d) in message is different from mnc(%ld) in CU \n",
+                    mnc, configuration->mnc[0]);
+    return(0);
+  }
+  else if (mnc_digit_length == 3 &&
+           (mnc !=
+            configuration->mnc[0])) {
+    LOG_I(GNB_APP, "MNC Digit Length %d\n",
+            configuration->mnc[0]);
+    LOG_E(GNB_APP, "mnc(%d) in message is different from mnc(%ld) in CU \n",
+                    mnc, configuration->mnc[0]);
+    return(0);
+  }
+
+  // if we're here, the mcc/mnc match so return success
+  return(1);
+}
+
 int du_check_plmn_identity(rrc_gNB_carrier_data_t *carrier,uint16_t mcc,uint16_t mnc,uint8_t mnc_digit_length) {
   NR_SIB1_t *sib1 = carrier->siblock1->message.choice.c1->choice.systemInformationBlockType1;
   AssertFatal(sib1->cellAccessRelatedInfo.plmn_IdentityList.list.array[0]->plmn_IdentityList.list.count > 0,
@@ -2159,6 +2200,52 @@ int gNB_app_handle_f1ap_setup_resp(f1ap_setup_resp_t *resp) {
       }
     }
   }
+  return(ret);
+}
+
+int gNB_app_handle_f1ap_gnb_du_configuration_update(f1ap_gnb_du_configuration_update_t *gnb_du_cfg_update) {
+  int i, j, si_ind, ret=0;
+  LOG_I(GNB_APP, "cells_to_modify %d, RRC instances %d\n",
+        gnb_du_cfg_update->num_cells_to_modify, RC.nb_nr_inst);
+
+  for (j = 0; j < gnb_du_cfg_update->num_cells_to_modify; j++) {
+    for (i = 0; i < RC.nb_nr_inst; i++) {
+      rrc_gNB_carrier_data_t *carrier =  &RC.nrrrc[i]->carrier;
+      gNB_RrcConfigurationReq *configuration = &RC.nrrrc[i]->configuration;
+      // identify local index of cell j by nr_cellid, plmn identity and physical cell ID
+      LOG_I(GNB_APP, "Checking cell %d, rrc inst %d : rrc->nr_cellid %lx, gnb_cu_cfg_updatenr_cellid %lx\n",
+            j, i, RC.nrrrc[i]->nr_cellid, gnb_du_cfg_update->cells_to_modify[j].nr_cellid);
+
+      if (RC.nrrrc[i]->nr_cellid == gnb_du_cfg_update->cells_to_modify[j].nr_cellid &&
+          cu_check_plmn_identity(configuration, gnb_du_cfg_update->cells_to_modify[j].mcc, gnb_du_cfg_update->cells_to_modify[j].mnc, gnb_du_cfg_update->cells_to_modify[j].mnc_digit_length)>0) {
+        ret++;
+      } else {
+        LOG_E(GNB_APP, "GNB_DU_CONFIGURATION_UPDATE not matching\n");
+      }
+    }
+  }
+  MessageDef *msg_ack_p = NULL;
+  if (ret > 0) {
+    // generate gNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE
+    msg_ack_p = itti_alloc_new_message (TASK_GNB_APP, 0, F1AP_GNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE);
+    F1AP_GNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(msg_ack_p).num_cells_failed_to_be_activated = 0;
+    F1AP_GNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(msg_ack_p).num_cells_failed_to_be_modified = 0;
+    F1AP_GNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(msg_ack_p).have_criticality = 0; 
+    F1AP_GNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(msg_ack_p).noofTNLAssociations_to_setup =0;
+    F1AP_GNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(msg_ack_p).noofTNLAssociations_failed = 0;
+    F1AP_GNB_DU_CONFIGURATION_UPDATE_ACKNOWLEDGE(msg_ack_p).noofDedicatedSIDeliveryNeededUEs = 0;
+    itti_send_msg_to_task (TASK_CU_F1, INSTANCE_DEFAULT, msg_ack_p);
+
+  }
+  else {
+    // generate gNB_DU_CONFIGURATION_UPDATE_FAILURE
+    msg_ack_p = itti_alloc_new_message (TASK_GNB_APP, 0, F1AP_GNB_DU_CONFIGURATION_UPDATE_FAILURE);
+    F1AP_GNB_DU_CONFIGURATION_UPDATE_FAILURE(msg_ack_p).cause = F1AP_CauseRadioNetwork_cell_not_available;
+
+    itti_send_msg_to_task (TASK_CU_F1, INSTANCE_DEFAULT, msg_ack_p);
+
+  }
+
   return(ret);
 }
 
