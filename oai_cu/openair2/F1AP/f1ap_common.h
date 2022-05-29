@@ -453,6 +453,11 @@ int f1ap_add_ue(F1_t isCu,
                 instance_t     instanceP,
                 rnti_t          rntiP);
 
+int f1ap_add_osc_ue(F1_t isCu,
+                    instance_t     instanceP,
+                    rnti_t         rntiP,
+                    int            du_ue_f1ap_id);
+
 int f1ap_remove_ue(F1_t isCu, instance_t instanceP,
                    rnti_t            rntiP);
 

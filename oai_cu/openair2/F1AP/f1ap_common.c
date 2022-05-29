@@ -117,6 +117,35 @@ int f1ap_add_ue(F1_t isCu,
   return -1;
 }
 
+int f1ap_add_osc_ue(F1_t isCu,
+                    instance_t     instanceP,
+                    rnti_t         rntiP,
+                    int            du_ue_f1ap_id) {
+  f1ap_cudu_inst_t *f1_inst=getCxt(isCu, instanceP);
+
+  for (int i = 0; i < MAX_MOBILES_PER_ENB; i++) {
+    if (f1_inst->f1ap_ue[i].rnti == rntiP) {
+      f1_inst->f1ap_ue[i].f1ap_uid = i;
+      LOG_I(F1AP, "Updating the index of UE with RNTI %x and du_ue_f1ap_id %ld\n", f1_inst->f1ap_ue[i].rnti, f1_inst->f1ap_ue[i].du_ue_f1ap_id);
+      return i;
+    }
+  }
+
+  // We didn't find the rnti
+  for (int i = 0; i < MAX_MOBILES_PER_ENB; i++) {
+    if (f1_inst->f1ap_ue[i].rnti == 0 ) {
+      f1_inst->f1ap_ue[i].rnti = rntiP;
+      f1_inst->f1ap_ue[i].f1ap_uid = i;
+      f1_inst->f1ap_ue[i].du_ue_f1ap_id = du_ue_f1ap_id;
+      f1_inst->f1ap_ue[i].cu_ue_f1ap_id = rntiP;
+      f1_inst->num_ues++;
+      LOG_I(F1AP, "Adding a new UE with RNTI %x and cu/du ue_f1ap_id %ld\n", f1_inst->f1ap_ue[i].rnti, f1_inst->f1ap_ue[i].du_ue_f1ap_id);
+      return i;
+    }
+  }
+
+  return -1;
+}
 
 int f1ap_remove_ue(F1_t isCu, instance_t instanceP,
                    rnti_t            rntiP) {

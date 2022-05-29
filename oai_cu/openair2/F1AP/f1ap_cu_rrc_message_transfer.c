@@ -56,6 +56,7 @@ int CU_handle_INITIAL_UL_RRC_MESSAGE_TRANSFER(instance_t             instance,
   rnti_t          rnti;
   sdu_size_t      ccch_sdu_len;
   int             CC_id =0;
+  int             du_ue_f1ap_id = 0;
   DevAssert(pdu != NULL);
 
   if (stream != 0) {
@@ -68,6 +69,7 @@ int CU_handle_INITIAL_UL_RRC_MESSAGE_TRANSFER(instance_t             instance,
   /* GNB_DU_UE_F1AP_ID */
   F1AP_FIND_PROTOCOLIE_BY_ID(F1AP_InitialULRRCMessageTransferIEs_t, ie, container,
                              F1AP_ProtocolIE_ID_id_gNB_DU_UE_F1AP_ID, true);
+  du_ue_f1ap_id = ie->value.choice.GNB_DU_UE_F1AP_ID;
   /* NRCGI
   * Fixme: process NRCGI
   */
@@ -113,7 +115,8 @@ int CU_handle_INITIAL_UL_RRC_MESSAGE_TRANSFER(instance_t             instance,
            ie->value.choice.DUtoCURRCContainer.size);
   }
 
-  int f1ap_uid = f1ap_add_ue(CUtype, instance, rnti);
+  //int f1ap_uid = f1ap_add_ue(CUtype, instance, rnti);
+  int f1ap_uid = f1ap_add_osc_ue(CUtype, instance, rnti, du_ue_f1ap_id);
 
   if (f1ap_uid  < 0 ) {
     LOG_E(F1AP, "Failed to add UE \n");
