@@ -70,6 +70,7 @@ int newGtpuDeleteAllTunnels(instance_t instance, rnti_t rnti);
 int newGtpuDeleteTunnels(instance_t instance, rnti_t rnti, int nbTunnels, pdusessionid_t *pdusession_id);
 instance_t gtpv1Init(openAddr_t context);
 void *gtpv1uTask(void *args);
+void *gtpv1uSimTask(void *args);
 
 #ifdef __cplusplus
 }

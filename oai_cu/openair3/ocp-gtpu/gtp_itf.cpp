@@ -462,10 +462,10 @@ teid_t newGtpuCreateTunnel(instance_t instance, rnti_t rnti, int incoming_bearer
   auto inst=&globGtp.instances[instance];
   auto it=inst->ue2te_mapping.find(rnti);
 
-  if ( it != inst->ue2te_mapping.end() ) {
+  /*if ( it != inst->ue2te_mapping.end() ) {
     LOG_W(GTPU,"[%ld] Create a config for a already existing GTP tunnel (rnti %x)\n", instance, rnti);
     inst->ue2te_mapping.erase(it);
-  }
+  }*/
 
   teid_t incoming_teid=gtpv1uNewTeid();
 
@@ -1056,6 +1056,87 @@ void *gtpv1uTask(void *args)  {
   }
 
   return NULL;
+}
+
+void *gtpv1uSimTask(void *args)  {
+  LOG_W(GTPU, "Initializing UDP SIM\n");
+
+  // Dummy data for DL
+  char data[1215] = "In telecommunications, 5G is the fifth generation technology standard for broadband cellular"
+  " networks, which cellular phone companies began deploying worldwide in 2019, and is the planned successor to the 4G"
+  " networks which provide connectivity to most current cellphones. 5G networks are predicted to have more than 1.7"
+  " billion subscribers worldwide by 2025, according to the GSM Association.Like its predecessors, 5G networks are"
+  " cellular networks,in which the service area is divided into small geographical areas called cells.All 5G wireless"
+  " devices in a cell are connected to the Internet and telephone network by radio waves through local antenna in the"
+  " cell. The main advantage of the new networks is that they will have greater bandwidth, giving higher download"
+  " speeds, eventually up to 10 gigabits per second(Gbit/s). Due to the increased bandwidth, it is expected the"
+  " networks will not exclusively serve cellphones like existing cellular networks, but also be used as general"
+  " internet service providers for laptops and desktop computers, competing with existing ISPs such as cable"
+  " internet, and also will make possible new applications in internet of things (IoT) and machine to machine areas.";
+  int datSize = 1215;
+  int   numRNTI = 1;
+  int   numDRB = 3;
+
+  // Params for GTPU to send dummy data to the target
+  char ch = NULL;       // Command of operation
+  uint8_t cnt = 0;      // Count of sending
+  gtpv1u_gnb_tunnel_data_req_t *req;
+  
+  while(1) {
+    ch = getchar();
+    switch (ch) {
+      case 'd':
+        {
+          LOG_W(GTPU, "Sending DL User Data: %s\n", data);
+
+          // Fill the params for sending dummy data
+          extern instance_t CUuniqInstance;
+          MessageDef  *message_p = itti_alloc_new_message_sized(TASK_GTPV1_U, 0,
+                      GTPV1U_GNB_TUNNEL_DATA_REQ,
+                      sizeof(gtpv1u_gnb_tunnel_data_req_t)
+                      + datSize
+                      + GTPU_HEADER_OVERHEAD_MAX);
+          AssertFatal(message_p != NULL, "OUT OF MEMORY");
+          req = &GTPV1U_GNB_TUNNEL_DATA_REQ(message_p);
+          LOG_W(GTPU, "\nCopy the dummy data\n");
+          uint8_t *gtpu_buffer_p = (uint8_t*)(req+1);
+          memcpy(gtpu_buffer_p+GTPU_HEADER_OVERHEAD_MAX, data, datSize);
+
+          while(cnt < 1){
+            for(int rnti = 100; rnti <= 99+numRNTI; rnti++){
+              for(int rb_id = 1; rb_id <= numDRB; rb_id++){
+                LOG_W(GTPU, "Fill the params for sending dummy data\n");
+                req->buffer        = gtpu_buffer_p;
+                req->length        = datSize;
+                req->offset        = 0;
+                req->rnti          = rnti;
+                req->pdusession_id = rb_id;
+                LOG_W(GTPU, "UE RNTI: %d\n", req->rnti);
+                LOG_W(GTPU, "%s() (drb %d) sending message to gtp size %d\n", __func__, rb_id, datSize);
+                gtpv1uSend2(compatInst(CUuniqInstance), req, false, false);
+                LOG_W(GTPU, "%s() done\n", __func__);
+                //sleep(1);
+                cnt++;
+              }
+            }
+          }
+          cnt = 0;
+        }
+        break;
+
+      case 'm':
+        {
+          LOG_W(GTPU, "Check message\n");
+          MessageDef *message_p = NULL;
+          itti_receive_msg(TASK_RRC_UE_SIM, &message_p);
+        }
+        break;
+
+      default:
+        LOG_E(GTPU, "Unhandled message\n");
+        break;
+    }//switch
+  }
 }
 
 #ifdef __cplusplus

@@ -365,6 +365,10 @@ int create_gNB_tasks(uint32_t gnb_nb) {
         LOG_E(GTPU, "Create task for GTPV1U failed\n");
         return -1;
       }
+      if (itti_create_task (TASK_GTPV1_U_SIM, &gtpv1uSimTask, NULL) < 0) {
+        LOG_E(GTPU, "Create task for GTPV1U failed\n");
+        return -1;
+      }
     }
   }
 
