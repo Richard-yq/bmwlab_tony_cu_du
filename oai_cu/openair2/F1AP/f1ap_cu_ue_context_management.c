@@ -320,11 +320,16 @@ int CU_send_UE_CONTEXT_SETUP_REQUEST(instance_t instance,
       {
         /* qoS_Characteristics */
         {
-          int some_decide_qoS_characteristics = 0; // BK: Need Check
+          int some_decide_qoS_characteristics = 1; // BK: Need Check
 
           if (some_decide_qoS_characteristics) {
             DRB_Information->dRB_QoS.qoS_Characteristics.present = F1AP_QoS_Characteristics_PR_non_Dynamic_5QI;
-            setQos(DRB_Information->dRB_QoS.qoS_Characteristics.choice.non_Dynamic_5QI);
+            //setQos(DRB_Information->dRB_QoS.qoS_Characteristics.choice.non_Dynamic_5QI);
+            asn1cCalloc(DRB_Information->dRB_QoS.qoS_Characteristics.choice.non_Dynamic_5QI, tmp);
+
+            tmp->fiveQI = 9L;
+            tmp->averagingWindow = 0L;
+            tmp->maxDataBurstVolume = 0L;
           } else {
             DRB_Information->dRB_QoS.qoS_Characteristics.present = F1AP_QoS_Characteristics_PR_dynamic_5QI;
             asn1cCalloc(DRB_Information->dRB_QoS.qoS_Characteristics.choice.dynamic_5QI, tmp);
@@ -397,10 +402,16 @@ int CU_send_UE_CONTEXT_SETUP_REQUEST(instance_t instance,
 
         /* OPTIONAL */
         /* sD */
-        if (0) {
-          asn1cCalloc(DRB_Information->sNSSAI.sD, tmp);
+        if (1) {
+          /*asn1cCalloc(DRB_Information->sNSSAI.sD, tmp);
           OCTET_STRING_fromBuf(tmp, "asdsa1d32sa1d31asd31as",
-                               strlen("asdsa1d32sa1d31asd31as"));
+                               strlen("asdsa1d32sa1d31asd31as"));*/
+          DRB_Information->sNSSAI.sD = calloc(1, sizeof(DRB_Information->sNSSAI.sD));
+          DRB_Information->sNSSAI.sD->buf = calloc(3, sizeof(uint8_t));
+          DRB_Information->sNSSAI.sD->size = 3;
+          DRB_Information->sNSSAI.sD->buf[0] = 01;
+          DRB_Information->sNSSAI.sD->buf[1] = 02;
+          DRB_Information->sNSSAI.sD->buf[2] = 03;
         }
       }
 
@@ -422,12 +433,17 @@ int CU_send_UE_CONTEXT_SETUP_REQUEST(instance_t instance,
         {
           /* qoS_Characteristics */
           {
-            int some_decide_qoS_characteristics = 0; // BK: Need Check
+            int some_decide_qoS_characteristics = 1; // BK: Need Check
             F1AP_QoS_Characteristics_t *QosParams=&flows_mapped_to_drb_item->qoSFlowLevelQoSParameters.qoS_Characteristics;
 
             if (some_decide_qoS_characteristics) {
               QosParams->present = F1AP_QoS_Characteristics_PR_non_Dynamic_5QI;
-              setQos(QosParams->choice.non_Dynamic_5QI);
+              //setQos(QosParams->choice.non_Dynamic_5QI);
+              asn1cCalloc(QosParams->choice.non_Dynamic_5QI, tmp);
+
+              tmp->fiveQI = 9L;
+              tmp->averagingWindow = 0L;
+              tmp->maxDataBurstVolume = 0L;
             } else {
               QosParams->present = F1AP_QoS_Characteristics_PR_dynamic_5QI;
               asn1cCalloc(QosParams->choice.dynamic_5QI, tmp);
