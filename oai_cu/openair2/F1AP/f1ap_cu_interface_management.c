@@ -550,6 +550,10 @@ int CU_handle_gNB_DU_CONFIGURATION_UPDATE(instance_t instance,
             break;
       case F1AP_ProtocolIE_ID_id_gNB_DU_ID:
             break;
+      case F1AP_ProtocolIE_ID_id_Cells_Status_List:
+            //TODO:Develop function to process Cell Status List
+            //Enable OAI CU to process gNB-DU Configuration Update
+            break;
 
       default:
             AssertFatal(1==0,"F1AP_ProtocolIE_ID_id %d unknown\n", (int)ie->id);
